@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Jeopardy Game (Resettable)</title>
+    <title>AI Jeopardy Game (Resettable Questions)</title>
     <style>
         /*
         * ----------------------------------------------------
-        * CSS: Blue, Gold, and White Theme
+        * CSS: Blue, Gold, and White Theme (Exact Same)
         * ----------------------------------------------------
         */
         :root {
@@ -90,7 +90,6 @@
             font-weight: bold;
             text-transform: uppercase;
             text-align: center;
-            /* Added position relative for the reset button */
             position: relative;
         }
 
@@ -115,7 +114,7 @@
         .clue-cell.played {
             background-color: var(--light-blue);
             color: var(--white);
-            pointer-events: none; /* Disable clicking once played */
+            pointer-events: none;
             font-size: 1.5em;
             cursor: default;
         }
@@ -134,6 +133,7 @@
             cursor: pointer;
             border-radius: 3px;
             display: none; /* Initially hidden */
+            z-index: 10;
         }
         .category-header.complete .reset-category-btn {
             display: block; /* Show when category is complete */
@@ -246,7 +246,7 @@
 
         const MAX_CLUES_PER_CATEGORY = 5;
 
-        // --- SCORE & NAME FUNCTIONS (Unchanged from previous version) ---
+        // --- SCORE & NAME FUNCTIONS ---
 
         function updateScore(operation) {
             const playerID = document.getElementById('player-select').value;
@@ -279,16 +279,13 @@
             newNameInput.value = "";
         }
 
-        // --- CLUE AND CATEGORY FUNCTIONS (New/Updated) ---
+        // --- CLUE AND CATEGORY FUNCTIONS (For Regeneration) ---
 
         /**
          * Handles the click on a clue cell, marks it played, and tracks category usage.
-         * @param {HTMLElement} clueCell - The div element that was clicked.
-         * @param {number} points - The point value of the clue.
-         * @param {number} columnIndex - The column index (0-4) of the clicked cell.
          */
         function clueClicked(clueCell, points, columnIndex) {
-            // 1. Mark the cell as played
+            // 1. Mark the cell as played (if not already)
             if (!clueCell.classList.contains('played')) {
                 clueCell.classList.add('played');
                 clueCell.textContent = 'Played';
@@ -309,11 +306,10 @@
 
         /**
          * Visually marks a category as complete and reveals the Reset button.
-         * @param {number} columnIndex - The column index (0-4) to mark.
          */
         function markCategoryComplete(columnIndex) {
             const categoryHeader = document.getElementById(`category-${columnIndex}`);
-            categoryHeader.textContent = 'CATEGORY COMPLETE - READY FOR NEW SUBJECT';
+            categoryHeader.innerHTML = 'CATEGORY COMPLETE - READY FOR NEW SUBJECT' + categoryHeader.querySelector('.reset-category-btn').outerHTML;
             categoryHeader.classList.add('complete');
 
             // Find all clues in this column and ensure they are marked as played
@@ -322,28 +318,29 @@
                 clue.classList.add('played');
                 clue.textContent = 'Complete';
             });
-
-            alert(`Category ${columnIndex + 1} is complete! Click the 'Reset/New Subject' button to change the category and questions.`);
         }
 
         /**
-         * Resets a category, clearing all played clues and changing the subject.
-         * @param {number} columnIndex - The column index (0-4) to reset.
+         * Resets a category, simulating new questions by clearing clues and setting a new subject.
+         * This is the function that allows the questions to "regenerate" (i.e., be re-playable).
          */
         function resetCategory(columnIndex) {
-            const newSubject = prompt(`Enter the New Subject/Category Name for Column ${columnIndex + 1}:`);
+            const categoryHeader = document.getElementById(`category-${columnIndex}`);
+            const defaultTitle = categoryHeader.getAttribute('data-default-title');
+            
+            // Prompt the user for the new subject
+            let newSubject = prompt(`Column ${columnIndex + 1} is complete. Enter the New Subject/Category Name:`);
 
+            // If user cancels or leaves blank, ask if they want to reuse the default title.
             if (newSubject === null || newSubject.trim() === '') {
-                // User cancelled or left blank, use a default placeholder
-                alert("Subject reset cancelled. Category name remains unchanged.");
-                return;
+                const confirmDefault = confirm(`Subject blank. Do you want to use the default title: "${defaultTitle}"?`);
+                newSubject = confirmDefault ? defaultTitle : defaultTitle; 
             }
-
+            
             // 1. Reset tracker
             playedClues[columnIndex] = 0;
 
             // 2. Reset category header
-            const categoryHeader = document.getElementById(`category-${columnIndex}`);
             categoryHeader.textContent = newSubject.toUpperCase();
             categoryHeader.classList.remove('complete');
             
@@ -355,16 +352,16 @@
             categoryHeader.appendChild(resetButton);
 
 
-            // 3. Reset all clues in the column
+            // 3. Reset all clues in the column (The regeneration)
             const cluesInColumn = document.querySelectorAll(`.clue-cell[data-column="${columnIndex}"]`);
-            const pointValues = [200, 400, 600, 800, 1000]; // Standard point values for reset
+            const pointValues = [200, 400, 600, 800, 1000]; 
 
             cluesInColumn.forEach((clue, index) => {
                 clue.classList.remove('played');
-                clue.textContent = pointValues[index];
+                clue.textContent = pointValues[index]; // Reset text back to point value
             });
 
-            alert(`Category ${newSubject.toUpperCase()} successfully reset with new questions (points) for play!`);
+            alert(`Category reset. New Subject: ${newSubject.toUpperCase()}. The questions (points) are ready to be played again!`);
         }
     </script>
 
