@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Jeopardy Game</title>
+    <style>
+        /*
+        * ----------------------------------------------------
+        * CSS: Blue, Gold, and White Theme
+        * ----------------------------------------------------
+        */
+
+        :root {
+            --blue: #000080; /* Darker Navy Blue */
+            --gold: #FFD700; /* Gold */
+            --white: #FFFFFF; /* White */
+            --light-blue: #4169E1; /* Royal Blue for accents */
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--blue);
+            color: var(--white);
+            margin: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--gold);
+            border-bottom: 3px solid var(--gold);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        /* --- Scoreboard & Controls --- */
+        .controls {
+            background-color: var(--light-blue);
+            border: 2px solid var(--gold);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+
+        .player-score, .name-change {
+            background-color: var(--white);
+            color: var(--blue);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px;
+            flex: 1 1 200px; /* Allows flexibility but ensures min width */
+            text-align: left;
+        }
+
+        .name-change input[type="text"], .name-change button {
+            padding: 5px;
+            margin-top: 5px;
+            border: 1px solid var(--blue);
+            border-radius: 3px;
+        }
+
+        .name-change button {
+            background-color: var(--gold);
+            color: var(--blue);
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .score-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--blue);
+        }
+
+        /* --- Jeopardy Board --- */
+        .jeopardy-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 5 Columns for 5 Categories */
+            gap: 5px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            border: 5px solid var(--gold);
+            background-color: var(--light-blue);
+        }
+
+        .category-header {
+            background-color: var(--gold);
+            color: var(--blue);
+            padding: 15px 5px;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .clue-cell {
+            background-color: var(--blue);
+            color: var(--gold);
+            padding: 20px 5px;
+            font-size: 2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--gold);
+        }
+
+        .clue-cell:hover {
+            background-color: var(--light-blue);
+        }
+
+        .clue-cell.answered {
+            background-color: var(--light-blue);
+            color: var(--white);
+            pointer-events: none; /* Disable clicking once answered */
+            font-size: 1.5em;
+        }
+
+        /* --- Point Input Modal (Simplified for this exercise) --- */
+        .point-input {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: var(--white);
+            color: var(--blue);
+            border-radius: 5px;
+            text-align: center;
+        }
+        .point-input label { margin-right: 10px; }
+        .point-input input { padding: 5px; margin: 0 5px; }
+        .point-input button {
+            background-color: var(--gold);
+            color: var(--blue);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>AI Jeopardy Challenge</h1>
+
+    <div class="controls">
+        <div class="player-score">
+            <span id="player-name-1">Player 1</span> Score:
+            <span id="score-1" class="score-display">0</span>
+        </div>
+
+        <div class="player-score">
+            <span id="player-name-2">Player 2</span> Score:
+            <span id="score-2" class="score-display">0</span>
+        </div>
+
+        <div class="point-input">
+            <label for="player-select">Award Points to:</label>
+            <select id="player-select">
+                <option value="1">Player 1</option>
+                <option value="2">Player 2</option>
+            </select>
+            <label for="point-value">Points:</label>
+            <input type="number" id="point-value" value="0" min="-500" step="100">
+            <button onclick="updateScore('add')">Add</button>
+            <button onclick="updateScore('subtract')">Subtract</button>
+        </div>
+
+        <div class="name-change">
+            <label for="new-name-input">Change Name:</label>
+            <input type="text" id="new-name-input" placeholder="New Name">
+            <button onclick="changeName(1)">Set P1</button>
+            <button onclick="changeName(2)">Set P2</button>
+        </div>
+    </div>
+
+    <div class="jeopardy-board">
+        <div class="category-header">Tech History</div>
+        <div class="category-header">World Capitals</div>
+        <div class="category-header">Mythology</div>
+        <div class="category-header">Famous Quotes</div>
+        <div class="category-header">Cooking Terms</div>
+
+        <div class="clue-cell" data-points="200" onclick="clueClicked(this, 200)">200</div>
+        <div class="clue-cell" data-points="200" onclick="clueClicked(this, 200)">200</div>
+        <div class="clue-cell" data-points="200" onclick="clueClicked(this, 200)">200</div>
+        <div class="clue-cell" data-points="200" onclick="clueClicked(this, 200)">200</div>
+        <div class="clue-cell" data-points="200" onclick="clueClicked(this, 200)">200</div>
+
+        <div class="clue-cell" data-points="400" onclick="clueClicked(this, 400)">400</div>
+        <div class="clue-cell" data-points="400" onclick="clueClicked(this, 400)">400</div>
+        <div class="clue-cell" data-points="400" onclick="clueClicked(this, 400)">400</div>
+        <div class="clue-cell" data-points="400" onclick="clueClicked(this, 400)">400</div>
+        <div class="clue-cell" data-points="400" onclick="clueClicked(this, 400)">400</div>
+
+        <div class="clue-cell" data-points="600" onclick="clueClicked(this, 600)">600</div>
+        <div class="clue-cell" data-points="600" onclick="clueClicked(this, 600)">600</div>
+        <div class="clue-cell" data-points="600" onclick="clueClicked(this, 600)">600</div>
+        <div class="clue-cell" data-points="600" onclick="clueClicked(this, 600)">600</div>
+        <div class="clue-cell" data-points="600" onclick="clueClicked(this, 600)">600</div>
+
+        <div class="clue-cell" data-points="800" onclick="clueClicked(this, 800)">800</div>
+        <div class="clue-cell" data-points="800" onclick="clueClicked(this, 800)">800</div>
+        <div class="clue-cell" data-points="800" onclick="clueClicked(this, 800)">800</div>
+        <div class="clue-cell" data-points="800" onclick="clueClicked(this, 800)">800</div>
+        <div class="clue-cell" data-points="800" onclick="clueClicked(this, 800)">800</div>
+
+        <div class="clue-cell" data-points="1000" onclick="clueClicked(this, 1000)">1000</div>
+        <div class="clue-cell" data-points="1000" onclick="clueClicked(this, 1000)">1000</div>
+        <div class="clue-cell" data-points="1000" onclick="clueClicked(this, 1000)">1000</div>
+        <div class="clue-cell" data-points="1000" onclick="clueClicked(this, 1000)">1000</div>
+        <div class="clue-cell" data-points="1000" onclick="clueClicked(this, 1000)">1000</div>
+    </div>
+
+    <script>
+        /*
+        * ----------------------------------------------------
+        * JavaScript: Game Logic for Scores and Names
+        * ----------------------------------------------------
+        */
+
+        // Initial Scores (stored in a simple object)
+        const scores = {
+            1: 0,
+            2: 0
+        };
+
+        /**
+         * Updates a player's score based on the input form.
+         * @param {string} operation - 'add' or 'subtract'.
+         */
+        function updateScore(operation) {
+            const playerID = document.getElementById('player-select').value;
+            let points = parseInt(document.getElementById('point-value').value);
+
+            // Validate the input
+            if (isNaN(points)) {
+                alert("Please enter a valid number for points.");
+                return;
+            }
+
+            if (operation === 'subtract') {
+                points *= -1; // Make the points negative for subtraction
+            }
+
+            // Update the score in the JavaScript object
+            scores[playerID] += points;
+
+            // Update the score displayed on the page
+            document.getElementById(`score-${playerID}`).textContent = scores[playerID];
+
+            // Reset the point value input for convenience
+            document.getElementById('point-value').value = 0;
+        }
+
+        /**
+         * Changes a player's display name.
+         * @param {number} playerID - The ID of the player (1 or 2).
+         */
+        function changeName(playerID) {
+            const newNameInput = document.getElementById('new-name-input');
+            let newName = newNameInput.value.trim();
+
+            if (newName === "") {
+                alert("Please enter a new name.");
+                return;
+            }
+
+            // Update the name displayed on the page
+            document.getElementById(`player-name-${playerID}`).textContent = newName;
+
+            // Optional: clear the input field after successful update
+            newNameInput.value = "";
+        }
+
+        /**
+         * Handles the click on a clue cell.
+         * @param {HTMLElement} clueCell - The div element that was clicked.
+         * @param {number} points - The point value of the clue.
+         */
+        function clueClicked(clueCell, points) {
+            // 1. Mark the cell as answered/used
+            clueCell.classList.add('answered');
+            clueCell.textContent = 'Played';
+
+            // 2. Set the Point Input field to the clicked clue's value
+            document.getElementById('point-value').value = points;
+
+            // 3. (Optional) Alert the user what they should do next
+            alert(`Clue for ${points} clicked! \n\nSelect the correct player and click 'Add' or 'Subtract' above.`);
+        }
+    </script>
+
+</body>
+</html>
