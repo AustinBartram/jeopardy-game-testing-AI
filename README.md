@@ -1,1 +1,1 @@
-# jeopardy-game-testing-AI
+can you make me a jeopardy game that allows for me to enter points for users and change their name. Then can you construct the whole table with 5 headings to your choice. and for the css can you make it blue, gold, and white. 
