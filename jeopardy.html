@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Jeopardy Game</title>
+    <title>AI Jeopardy Game (Resettable)</title>
     <style>
         /*
         * ----------------------------------------------------
         * CSS: Blue, Gold, and White Theme
         * ----------------------------------------------------
         */
-
         :root {
             --blue: #000080; /* Darker Navy Blue */
             --gold: #FFD700; /* Gold */
             --white: #FFFFFF; /* White */
             --light-blue: #4169E1; /* Royal Blue for accents */
+            --dark-red: #A52A2A; /* For Reset button */
         }
 
         body {
@@ -45,40 +45,35 @@
             flex-wrap: wrap;
         }
 
-        .player-score, .name-change {
+        .player-score, .name-change, .point-input {
             background-color: var(--white);
             color: var(--blue);
             padding: 10px;
             border-radius: 5px;
             margin: 5px;
-            flex: 1 1 200px; /* Allows flexibility but ensures min width */
+            flex: 1 1 200px;
             text-align: left;
         }
 
-        .name-change input[type="text"], .name-change button {
+        .point-input { text-align: center; flex: 1 1 400px; }
+        .name-change input, .name-change button, .point-input input, .point-input button, .point-input select {
             padding: 5px;
-            margin-top: 5px;
+            margin: 3px;
             border: 1px solid var(--blue);
             border-radius: 3px;
         }
 
-        .name-change button {
+        .name-change button, .point-input button {
             background-color: var(--gold);
             color: var(--blue);
             cursor: pointer;
             font-weight: bold;
         }
 
-        .score-display {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: var(--blue);
-        }
-
         /* --- Jeopardy Board --- */
         .jeopardy-board {
             display: grid;
-            grid-template-columns: repeat(5, 1fr); /* 5 Columns for 5 Categories */
+            grid-template-columns: repeat(5, 1fr);
             gap: 5px;
             width: 100%;
             max-width: 1200px;
@@ -95,6 +90,8 @@
             font-weight: bold;
             text-transform: uppercase;
             text-align: center;
+            /* Added position relative for the reset button */
+            position: relative;
         }
 
         .clue-cell {
@@ -115,31 +112,31 @@
             background-color: var(--light-blue);
         }
 
-        .clue-cell.answered {
+        .clue-cell.played {
             background-color: var(--light-blue);
             color: var(--white);
-            pointer-events: none; /* Disable clicking once answered */
+            pointer-events: none; /* Disable clicking once played */
             font-size: 1.5em;
+            cursor: default;
         }
 
-        /* --- Point Input Modal (Simplified for this exercise) --- */
-        .point-input {
-            margin-top: 15px;
-            padding: 10px;
-            background-color: var(--white);
-            color: var(--blue);
-            border-radius: 5px;
-            text-align: center;
-        }
-        .point-input label { margin-right: 10px; }
-        .point-input input { padding: 5px; margin: 0 5px; }
-        .point-input button {
-            background-color: var(--gold);
-            color: var(--blue);
-            border: none;
-            padding: 8px 15px;
-            border-radius: 3px;
+        /* Reset Button Styling */
+        .reset-category-btn {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            background-color: var(--dark-red);
+            color: var(--white);
+            border: 1px solid var(--white);
+            padding: 2px 5px;
+            font-size: 0.7em;
+            font-weight: normal;
             cursor: pointer;
+            border-radius: 3px;
+            display: none; /* Initially hidden */
+        }
+        .category-header.complete .reset-category-btn {
+            display: block; /* Show when category is complete */
         }
     </style>
 </head>
@@ -159,108 +156,116 @@
         </div>
 
         <div class="point-input">
-            <label for="player-select">Award Points to:</label>
+            <label>Award Points:</label>
             <select id="player-select">
                 <option value="1">Player 1</option>
                 <option value="2">Player 2</option>
             </select>
-            <label for="point-value">Points:</label>
-            <input type="number" id="point-value" value="0" min="-500" step="100">
+            <label>Value:</label>
+            <input type="number" id="point-value" value="0" min="-1000" step="100" style="width: 70px;">
             <button onclick="updateScore('add')">Add</button>
             <button onclick="updateScore('subtract')">Subtract</button>
         </div>
 
         <div class="name-change">
-            <label for="new-name-input">Change Name:</label>
+            <label>Change Name:</label>
             <input type="text" id="new-name-input" placeholder="New Name">
             <button onclick="changeName(1)">Set P1</button>
             <button onclick="changeName(2)">Set P2</button>
         </div>
     </div>
 
-    <div class="jeopardy-board">
-        <div class="category-header">Tech History</div>
-        <div class="category-header">World Capitals</div>
-        <div class="category-header">Mythology</div>
-        <div class="category-header">Famous Quotes</div>
-        <div class="category-header">Cooking Terms</div>
+    <div class="jeopardy-board" id="jeopardy-board">
+        <div class="category-header" data-column-index="0" data-default-title="Tech History" id="category-0">
+            Tech History
+            <button class="reset-category-btn" onclick="resetCategory(0)">Reset/New Subject</button>
+        </div>
+        <div class="category-header" data-column-index="1" data-default-title="World Capitals" id="category-1">
+            World Capitals
+            <button class="reset-category-btn" onclick="resetCategory(1)">Reset/New Subject</button>
+        </div>
+        <div class="category-header" data-column-index="2" data-default-title="Mythology" id="category-2">
+            Mythology
+            <button class="reset-category-btn" onclick="resetCategory(2)">Reset/New Subject</button>
+        </div>
+        <div class="category-header" data-column-index="3" data-default-title="Famous Quotes" id="category-3">
+            Famous Quotes
+            <button class="reset-category-btn" onclick="resetCategory(3)">Reset/New Subject</button>
+        </div>
+        <div class="category-header" data-column-index="4" data-default-title="Cooking Terms" id="category-4">
+            Cooking Terms
+            <button class="reset-category-btn" onclick="resetCategory(4)">Reset/New Subject</button>
+        </div>
 
-        <div class="clue-cell" data-points="200" onclick="clueClicked(this, 200)">200</div>
-        <div class="clue-cell" data-points="200" onclick="clueClicked(this, 200)">200</div>
-        <div class="clue-cell" data-points="200" onclick="clueClicked(this, 200)">200</div>
-        <div class="clue-cell" data-points="200" onclick="clueClicked(this, 200)">200</div>
-        <div class="clue-cell" data-points="200" onclick="clueClicked(this, 200)">200</div>
+        <div class="clue-cell" data-points="200" data-column="0" onclick="clueClicked(this, 200, 0)">200</div>
+        <div class="clue-cell" data-points="200" data-column="1" onclick="clueClicked(this, 200, 1)">200</div>
+        <div class="clue-cell" data-points="200" data-column="2" onclick="clueClicked(this, 200, 2)">200</div>
+        <div class="clue-cell" data-points="200" data-column="3" onclick="clueClicked(this, 200, 3)">200</div>
+        <div class="clue-cell" data-points="200" data-column="4" onclick="clueClicked(this, 200, 4)">200</div>
 
-        <div class="clue-cell" data-points="400" onclick="clueClicked(this, 400)">400</div>
-        <div class="clue-cell" data-points="400" onclick="clueClicked(this, 400)">400</div>
-        <div class="clue-cell" data-points="400" onclick="clueClicked(this, 400)">400</div>
-        <div class="clue-cell" data-points="400" onclick="clueClicked(this, 400)">400</div>
-        <div class="clue-cell" data-points="400" onclick="clueClicked(this, 400)">400</div>
+        <div class="clue-cell" data-points="400" data-column="0" onclick="clueClicked(this, 400, 0)">400</div>
+        <div class="clue-cell" data-points="400" data-column="1" onclick="clueClicked(this, 400, 1)">400</div>
+        <div class="clue-cell" data-points="400" data-column="2" onclick="clueClicked(this, 400, 2)">400</div>
+        <div class="clue-cell" data-points="400" data-column="3" onclick="clueClicked(this, 400, 3)">400</div>
+        <div class="clue-cell" data-points="400" data-column="4" onclick="clueClicked(this, 400, 4)">400</div>
 
-        <div class="clue-cell" data-points="600" onclick="clueClicked(this, 600)">600</div>
-        <div class="clue-cell" data-points="600" onclick="clueClicked(this, 600)">600</div>
-        <div class="clue-cell" data-points="600" onclick="clueClicked(this, 600)">600</div>
-        <div class="clue-cell" data-points="600" onclick="clueClicked(this, 600)">600</div>
-        <div class="clue-cell" data-points="600" onclick="clueClicked(this, 600)">600</div>
+        <div class="clue-cell" data-points="600" data-column="0" onclick="clueClicked(this, 600, 0)">600</div>
+        <div class="clue-cell" data-points="600" data-column="1" onclick="clueClicked(this, 600, 1)">600</div>
+        <div class="clue-cell" data-points="600" data-column="2" onclick="clueClicked(this, 600, 2)">600</div>
+        <div class="clue-cell" data-points="600" data-column="3" onclick="clueClicked(this, 600, 3)">600</div>
+        <div class="clue-cell" data-points="600" data-column="4" onclick="clueClicked(this, 600, 4)">600</div>
 
-        <div class="clue-cell" data-points="800" onclick="clueClicked(this, 800)">800</div>
-        <div class="clue-cell" data-points="800" onclick="clueClicked(this, 800)">800</div>
-        <div class="clue-cell" data-points="800" onclick="clueClicked(this, 800)">800</div>
-        <div class="clue-cell" data-points="800" onclick="clueClicked(this, 800)">800</div>
-        <div class="clue-cell" data-points="800" onclick="clueClicked(this, 800)">800</div>
+        <div class="clue-cell" data-points="800" data-column="0" onclick="clueClicked(this, 800, 0)">800</div>
+        <div class="clue-cell" data-points="800" data-column="1" onclick="clueClicked(this, 800, 1)">800</div>
+        <div class="clue-cell" data-points="800" data-column="2" onclick="clueClicked(this, 800, 2)">800</div>
+        <div class="clue-cell" data-points="800" data-column="3" onclick="clueClicked(this, 800, 3)">800</div>
+        <div class="clue-cell" data-points="800" data-column="4" onclick="clueClicked(this, 800, 4)">800</div>
 
-        <div class="clue-cell" data-points="1000" onclick="clueClicked(this, 1000)">1000</div>
-        <div class="clue-cell" data-points="1000" onclick="clueClicked(this, 1000)">1000</div>
-        <div class="clue-cell" data-points="1000" onclick="clueClicked(this, 1000)">1000</div>
-        <div class="clue-cell" data-points="1000" onclick="clueClicked(this, 1000)">1000</div>
-        <div class="clue-cell" data-points="1000" onclick="clueClicked(this, 1000)">1000</div>
+        <div class="clue-cell" data-points="1000" data-column="0" onclick="clueClicked(this, 1000, 0)">1000</div>
+        <div class="clue-cell" data-points="1000" data-column="1" onclick="clueClicked(this, 1000, 1)">1000</div>
+        <div class="clue-cell" data-points="1000" data-column="2" onclick="clueClicked(this, 1000, 2)">1000</div>
+        <div class="clue-cell" data-points="1000" data-column="3" onclick="clueClicked(this, 1000, 3)">1000</div>
+        <div class="clue-cell" data-points="1000" data-column="4" onclick="clueClicked(this, 1000, 4)">1000</div>
+
     </div>
 
     <script>
         /*
         * ----------------------------------------------------
-        * JavaScript: Game Logic for Scores and Names
+        * JavaScript: Game Logic for Scores, Names, and Resets
         * ----------------------------------------------------
         */
 
-        // Initial Scores (stored in a simple object)
-        const scores = {
-            1: 0,
-            2: 0
+        // Initial Scores
+        const scores = { 1: 0, 2: 0 };
+
+        // New: Track played clues per column (5 columns, 5 clues each)
+        const playedClues = {
+            0: 0, 1: 0, 2: 0, 3: 0, 4: 0
         };
 
-        /**
-         * Updates a player's score based on the input form.
-         * @param {string} operation - 'add' or 'subtract'.
-         */
+        const MAX_CLUES_PER_CATEGORY = 5;
+
+        // --- SCORE & NAME FUNCTIONS (Unchanged from previous version) ---
+
         function updateScore(operation) {
             const playerID = document.getElementById('player-select').value;
             let points = parseInt(document.getElementById('point-value').value);
 
-            // Validate the input
             if (isNaN(points)) {
                 alert("Please enter a valid number for points.");
                 return;
             }
 
             if (operation === 'subtract') {
-                points *= -1; // Make the points negative for subtraction
+                points *= -1;
             }
 
-            // Update the score in the JavaScript object
             scores[playerID] += points;
-
-            // Update the score displayed on the page
             document.getElementById(`score-${playerID}`).textContent = scores[playerID];
-
-            // Reset the point value input for convenience
             document.getElementById('point-value').value = 0;
         }
 
-        /**
-         * Changes a player's display name.
-         * @param {number} playerID - The ID of the player (1 or 2).
-         */
         function changeName(playerID) {
             const newNameInput = document.getElementById('new-name-input');
             let newName = newNameInput.value.trim();
@@ -270,28 +275,96 @@
                 return;
             }
 
-            // Update the name displayed on the page
             document.getElementById(`player-name-${playerID}`).textContent = newName;
-
-            // Optional: clear the input field after successful update
             newNameInput.value = "";
         }
 
+        // --- CLUE AND CATEGORY FUNCTIONS (New/Updated) ---
+
         /**
-         * Handles the click on a clue cell.
+         * Handles the click on a clue cell, marks it played, and tracks category usage.
          * @param {HTMLElement} clueCell - The div element that was clicked.
          * @param {number} points - The point value of the clue.
+         * @param {number} columnIndex - The column index (0-4) of the clicked cell.
          */
-        function clueClicked(clueCell, points) {
-            // 1. Mark the cell as answered/used
-            clueCell.classList.add('answered');
-            clueCell.textContent = 'Played';
+        function clueClicked(clueCell, points, columnIndex) {
+            // 1. Mark the cell as played
+            if (!clueCell.classList.contains('played')) {
+                clueCell.classList.add('played');
+                clueCell.textContent = 'Played';
 
-            // 2. Set the Point Input field to the clicked clue's value
+                // 2. Track usage for the column
+                playedClues[columnIndex] += 1;
+
+                // 3. Check if category is complete
+                if (playedClues[columnIndex] >= MAX_CLUES_PER_CATEGORY) {
+                    markCategoryComplete(columnIndex);
+                }
+            }
+
+            // 4. Set the Point Input field for the scorekeeper
             document.getElementById('point-value').value = points;
-
-            // 3. (Optional) Alert the user what they should do next
             alert(`Clue for ${points} clicked! \n\nSelect the correct player and click 'Add' or 'Subtract' above.`);
+        }
+
+        /**
+         * Visually marks a category as complete and reveals the Reset button.
+         * @param {number} columnIndex - The column index (0-4) to mark.
+         */
+        function markCategoryComplete(columnIndex) {
+            const categoryHeader = document.getElementById(`category-${columnIndex}`);
+            categoryHeader.textContent = 'CATEGORY COMPLETE - READY FOR NEW SUBJECT';
+            categoryHeader.classList.add('complete');
+
+            // Find all clues in this column and ensure they are marked as played
+            const cluesInColumn = document.querySelectorAll(`.clue-cell[data-column="${columnIndex}"]`);
+            cluesInColumn.forEach(clue => {
+                clue.classList.add('played');
+                clue.textContent = 'Complete';
+            });
+
+            alert(`Category ${columnIndex + 1} is complete! Click the 'Reset/New Subject' button to change the category and questions.`);
+        }
+
+        /**
+         * Resets a category, clearing all played clues and changing the subject.
+         * @param {number} columnIndex - The column index (0-4) to reset.
+         */
+        function resetCategory(columnIndex) {
+            const newSubject = prompt(`Enter the New Subject/Category Name for Column ${columnIndex + 1}:`);
+
+            if (newSubject === null || newSubject.trim() === '') {
+                // User cancelled or left blank, use a default placeholder
+                alert("Subject reset cancelled. Category name remains unchanged.");
+                return;
+            }
+
+            // 1. Reset tracker
+            playedClues[columnIndex] = 0;
+
+            // 2. Reset category header
+            const categoryHeader = document.getElementById(`category-${columnIndex}`);
+            categoryHeader.textContent = newSubject.toUpperCase();
+            categoryHeader.classList.remove('complete');
+            
+            // Re-append the button (it was overwritten by textContent)
+            const resetButton = document.createElement('button');
+            resetButton.className = 'reset-category-btn';
+            resetButton.setAttribute('onclick', `resetCategory(${columnIndex})`);
+            resetButton.textContent = 'Reset/New Subject';
+            categoryHeader.appendChild(resetButton);
+
+
+            // 3. Reset all clues in the column
+            const cluesInColumn = document.querySelectorAll(`.clue-cell[data-column="${columnIndex}"]`);
+            const pointValues = [200, 400, 600, 800, 1000]; // Standard point values for reset
+
+            cluesInColumn.forEach((clue, index) => {
+                clue.classList.remove('played');
+                clue.textContent = pointValues[index];
+            });
+
+            alert(`Category ${newSubject.toUpperCase()} successfully reset with new questions (points) for play!`);
         }
     </script>
 
